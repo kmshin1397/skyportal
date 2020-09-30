@@ -76,7 +76,7 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(2),
   },
   filterLink: {
-    width: "100%",
+    marginRight: theme.spacing(1),
   },
 }));
 
@@ -311,21 +311,21 @@ const Group = () => {
                   </div>
                 )}
                 &nbsp;
-                {currentUser.acls?.includes("Manage users") && (
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      toggleUserAdmin(user);
-                    }}
-                  >
-                    <span style={{ whiteSpace: "nowrap" }}>
-                      {isAdmin(user) ? "Remove admin" : "Make admin"}
-                    </span>
-                  </Button>
-                )}
-                &nbsp;
-                {currentUser.acls?.includes("Manage users") && (
-                  <ListItemSecondaryAction>
+                <ListItemSecondaryAction>
+                  {currentUser.acls?.includes("Manage users") && (
+                    <Button
+                      size="small"
+                      onClick={() => {
+                        toggleUserAdmin(user);
+                      }}
+                    >
+                      <span style={{ whiteSpace: "nowrap" }}>
+                        {isAdmin(user) ? "Remove admin" : "Make admin"}
+                      </span>
+                    </Button>
+                  )}
+                  &nbsp;
+                  {currentUser.acls?.includes("Manage users") && (
                     <IconButton
                       edge="end"
                       aria-label="delete"
@@ -341,8 +341,8 @@ const Group = () => {
                     >
                       <DeleteIcon />
                     </IconButton>
-                  </ListItemSecondaryAction>
-                )}
+                  )}
+                </ListItemSecondaryAction>
               </ListItem>
             ))}
           </List>
