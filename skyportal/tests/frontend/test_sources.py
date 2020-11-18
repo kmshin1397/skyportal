@@ -459,7 +459,7 @@ def test_dropdown_facility_change(driver, user, public_source):
     driver.wait_for_xpath("//code/div/pre[text()[contains(., 'dist')]]", timeout=45)
 
 
-# @pytest.mark.flaky(reruns=2)
+@pytest.mark.flaky(reruns=2)
 def test_source_notification(driver, user, public_group, public_source):
     driver.get(f"/become_user/{user.id}")
     driver.get(f"/source/{public_source.id}")
