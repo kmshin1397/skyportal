@@ -1,9 +1,9 @@
 database:
-    database: skyportal
-    host: db
-    port: 5432
-    user: skyportal
-    password: password
+  database: skyportal
+  host: db
+  port: 5432
+  user: skyportal
+  password: passwords
 
 server:
-    url: http://localhost:5000
+  url: http://localhost:5000
