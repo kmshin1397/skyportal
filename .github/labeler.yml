@@ -50,6 +50,8 @@ migration:
 needs-migration?:
   - any: ["skyportal/models.py"]
     all: ["!alembic/versions/*"]
+  - any: ["baselayer/app/models.py"]
+    all: ["!alembic/versions/*"]
 
 # Add 'python' label to any change to *.py files in the skyportal folder
 python:
