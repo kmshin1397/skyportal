@@ -228,7 +228,7 @@ database:
   host: localhost
   port: 5432
   user: skyportal
-  password:
+  password: test
 
 server:
   # From https://console.developers.google.com/
