@@ -1802,6 +1802,11 @@ class Instrument(Base):
         doc="Name of the instrument's listener class.",
     )
 
+    test_column = sa.Column(
+        sa.String,
+        doc="Test column.",
+    )
+
     @property
     def does_spectroscopy(self):
         """Return a boolean indicating whether the instrument is capable of
