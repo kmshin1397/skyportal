@@ -95,7 +95,7 @@ const About = () => {
   return (
     <Paper className={classes.root}>
       <Typography variant="h5">
-        This is SkyPortal&nbsp;
+        This is SkyPortal?&nbsp;
         <code>v{version}</code>.
       </Typography>
       <Typography variant="body1">
