@@ -1457,7 +1457,7 @@ def test_candidate_list_pagination(
             token=view_only_token,
         )
         assert status == 200
-        assert data["data"]["candidates"]["totalMatches"] == 2
+        assert data["data"]["totalMatches"] == 2
         assert data["data"]["candidates"][0]["id"] == obj_id1
 
         # Invalid page
