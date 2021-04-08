@@ -1448,6 +1448,7 @@ def test_candidate_list_pagination(
         assert status == 200
 
         print(t1, t2)
+
         from baselayer.app.env import load_env
         from baselayer.app.models import init_db
         from skyportal.models import DBSession, Candidate
@@ -1466,6 +1467,7 @@ def test_candidate_list_pagination(
         )
         assert status == 200
         assert data["data"]["totalMatches"] == 2
+        print(len(data["data"]["candidates"]))
         assert data["data"]["candidates"][0]["id"] == obj_id1
 
         # Invalid page
