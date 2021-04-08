@@ -176,9 +176,9 @@ def take_screenshot_and_page_source(webdriver, nodeid):
 def public_stream():
     stream = StreamFactory()
     # Save ID of new DB row
-    stream_id = stream.id
+    # stream_id = stream.id
     yield stream
-    StreamFactory.teardown(stream_id)
+    # StreamFactory.teardown(stream_id)
 
 
 @pytest.fixture()
@@ -202,9 +202,9 @@ def stream_with_users(super_admin_user, group_admin_user, user, view_only_user):
 @pytest.fixture()
 def public_group(public_stream):
     group = GroupFactory(streams=[public_stream])
-    group_id = group.id
+    # group_id = group.id
     yield group
-    GroupFactory.teardown(group_id)
+    # GroupFactory.teardown(group_id)
 
 
 @pytest.fixture()
@@ -275,9 +275,9 @@ def public_streamuser(public_stream, user):
 @pytest.fixture()
 def public_filter(public_group, public_stream):
     filter_ = FilterFactory(group=public_group, stream=public_stream)
-    filter_id = filter_.id
+    # filter_id = filter_.id
     yield filter_
-    FilterFactory.teardown(filter_id)
+    # FilterFactory.teardown(filter_id)
 
 
 @pytest.fixture()
