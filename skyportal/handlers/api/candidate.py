@@ -1052,6 +1052,8 @@ def grab_query_results(
     page_ids = map(lambda x: x[0], results)
     info["totalMatches"] = results[0][1] if len(results) > 0 else 0
 
+    print(ordered_ids.statement.compile(compile_kwargs={'literal_bind': True}))
+
     if page:
         if (
             (
