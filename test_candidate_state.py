@@ -4,4 +4,4 @@ from skyportal.models import DBSession, Candidate
 
 env, cfg = load_env()
 init_db(**cfg["database"])
-print(DBSession().query(Candidate.id, Candidate.passed_at).all())
+print(DBSession().query(Candidate.obj_id, Candidate.passed_at).all())
