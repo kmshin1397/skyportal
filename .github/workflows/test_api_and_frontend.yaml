@@ -164,6 +164,7 @@ jobs:
             PYTHONPATH=. python baselayer/tools/test_frontend.py --xml --headless 'skyportal/tests/api/test_candidates.py::test_candidate_list_pagination'
           done
       - name: Print test db state
+        if: ${{ always() }}
         run: |
           cat << EOF > config.yaml
             database:
