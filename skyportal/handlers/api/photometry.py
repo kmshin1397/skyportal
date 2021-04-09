@@ -1,6 +1,6 @@
 import uuid
 import math
-
+import time
 from astropy.time import Time
 from astropy.table import Table
 from marshmallow.exceptions import ValidationError
@@ -462,7 +462,7 @@ class PhotometryHandler(BaseHandler):
         self, df, instrument_cache, group_ids, validate=True
     ):
         # check for existing photometry and error if any is found
-
+        t = time.time()
         if validate:
             values_table, condition = self.get_values_table_and_condition(df)
 
@@ -480,20 +480,23 @@ class PhotometryHandler(BaseHandler):
                     'The following photometry already exists '
                     f'in the database: {dict_rep}.'
                 )
+        print(f"Validate: {time.time() - t}")
 
         # pre-fetch the photometry PKs. these are not guaranteed to be
         # gapless (e.g., 1, 2, 3, 4, 5, ...) but they are guaranteed
         # to be unique in the table and thus can be used to "reserve"
         # PK slots for uninserted rows
-
+        t = time.time()
         pkq = (
             f"SELECT nextval('photometry_id_seq') FROM "
             f"generate_series(1, {len(df)})"
         )
 
         proxy = DBSession().execute(pkq)
+        print(f"Fetch PKs: {time.time() - t}")
 
         # cache this as list for response
+        t = time.time()
         ids = [i[0] for i in proxy]
         df['id'] = ids
 
@@ -502,7 +505,8 @@ class PhotometryHandler(BaseHandler):
 
         rows = df.to_dict('records')
         upload_id = str(uuid.uuid4())
-
+        print(f"Cache PKs: {time.time() - t}")
+        t = time.time()
         params = []
         for packet in rows:
             if (
@@ -544,11 +548,19 @@ class PhotometryHandler(BaseHandler):
             )
 
             params.append(phot)
+        print(f"Make dicts: {time.time() - t}")
 
         #  actually do the insert
+        t = time.time()
         query = Photometry.__table__.insert()
         DBSession().execute(query, params)
-
+        print(f"Time to insert Photometry: {time.time() - t}")
+        # print(
+        #     query.compile(
+        #         compile_kwargs={"literal_binds": True},
+        #     )
+        # )
+        t = time.time()
         groupquery = GroupPhotometry.__table__.insert()
         params = []
 
@@ -557,6 +569,8 @@ class PhotometryHandler(BaseHandler):
                 params.append({'photometr_id': id, 'group_id': group_id})
 
         DBSession().execute(groupquery, params)
+        # print(groupquery.compile(compile_kwargs={"literal_binds": True}))
+        print(f"Time to insert GroupPhotometry: {time.time() - t}")
         return ids, upload_id
 
     def get_group_ids(self):
@@ -657,7 +671,9 @@ class PhotometryHandler(BaseHandler):
         except ValidationError as e:
             return self.error(e.args[0])
 
+        t = time.time()
         self.verify_and_commit()
+        print(f"Verify and commit: {time.time() - t}")
         return self.success(data={'ids': ids, 'upload_id': upload_id})
 
     @permissions(['Upload data'])
