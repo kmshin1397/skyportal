@@ -433,19 +433,18 @@ class PhotometryHandler(BaseHandler):
             ),
             *[
                 (
-                    idx,
-                    row["obj_id"],
-                    row["instrument_id"],
-                    row["origin"],
-                    float(row["mjd"]),
-                    float(row["standardized_fluxerr"]),
-                    float(row["standardized_flux"]),
+                    row.Index,
+                    row.obj_id,
+                    row.instrument_id,
+                    row.origin,
+                    float(row.mjd),
+                    float(row.standardized_fluxerr),
+                    float(row.standardized_flux),
                 )
-                for idx, row in df.iterrows()
+                for row in df.itertuples()
             ],
             alias_name="values_table",
         )
-
         # make sure no duplicate data are posted using the index
         condition = and_(
             Photometry.obj_id == values_table.c.obj_id,
@@ -462,10 +461,12 @@ class PhotometryHandler(BaseHandler):
         self, df, instrument_cache, group_ids, validate=True
     ):
         # check for existing photometry and error if any is found
-        t = time.time()
+        t0 = time.time()
         if validate:
+            t = time.time()
             values_table, condition = self.get_values_table_and_condition(df)
-
+            print(f"Get values and condition table: {time.time() - t}")
+            t = time.time()
             duplicated_photometry = (
                 DBSession()
                 .query(Photometry)
@@ -474,13 +475,13 @@ class PhotometryHandler(BaseHandler):
             )
 
             dict_rep = [d.to_dict() for d in duplicated_photometry]
-
+            print(f"Dict rep of duplicates: {time.time() - t}")
             if len(dict_rep) > 0:
                 raise ValidationError(
                     'The following photometry already exists '
                     f'in the database: {dict_rep}.'
                 )
-        print(f"Validate: {time.time() - t}")
+        print(f"Validate: {time.time() - t0}")
 
         # pre-fetch the photometry PKs. these are not guaranteed to be
         # gapless (e.g., 1, 2, 3, 4, 5, ...) but they are guaranteed
