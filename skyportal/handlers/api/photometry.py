@@ -558,21 +558,25 @@ class PhotometryHandler(BaseHandler):
 
         print(f"Make dicts: {time.time() - t}")
 
+        # Insert large photometry in batches (size 10000)
+        def divide_batches(params_list, n=10000):
+            # looping till length of params_list
+            for i in range(0, len(params_list), n):
+                yield params_list[i : i + n]  # noqa: E203
+
         #  actually do the insert
         t = time.time()
         query = Photometry.__table__.insert()
-        DBSession().execute(query, params)
+        for batch in divide_batches(params):
+            DBSession().execute(query, batch)
         print(f"Number of Photometry rows: {len(params)}")
         print(f"Time to insert Photometry: {time.time() - t}")
-        # print(
-        #     query.compile(
-        #         compile_kwargs={"literal_binds": True},
-        #     )
-        # )
+
         t = time.time()
         groupquery = GroupPhotometry.__table__.insert()
-        DBSession().execute(groupquery, group_photometry_params)
-        # print(groupquery.compile(compile_kwargs={"literal_binds": True}))
+        for batch in divide_batches(group_photometry_params):
+            DBSession().execute(groupquery, batch)
+
         print(f"Number of GroupPhotometry rows: {len(group_photometry_params)}")
         print(f"Time to insert GroupPhotometry: {time.time() - t}")
         return ids, upload_id
