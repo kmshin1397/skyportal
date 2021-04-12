@@ -509,6 +509,7 @@ class PhotometryHandler(BaseHandler):
         print(f"Cache PKs: {time.time() - t}")
         t = time.time()
         params = []
+        group_photometry_params = []
         for packet in rows:
             if (
                 packet["filter"]
@@ -549,6 +550,12 @@ class PhotometryHandler(BaseHandler):
             )
 
             params.append(phot)
+
+            for group_id in group_ids:
+                group_photometry_params.append(
+                    {'photometr_id': packet['id'], 'group_id': group_id}
+                )
+
         print(f"Make dicts: {time.time() - t}")
 
         #  actually do the insert
@@ -563,13 +570,7 @@ class PhotometryHandler(BaseHandler):
         # )
         t = time.time()
         groupquery = GroupPhotometry.__table__.insert()
-        params = []
-
-        for id in ids:
-            for group_id in group_ids:
-                params.append({'photometr_id': id, 'group_id': group_id})
-
-        DBSession().execute(groupquery, params)
+        DBSession().execute(groupquery, group_photometry_params)
         # print(groupquery.compile(compile_kwargs={"literal_binds": True}))
         print(f"Time to insert GroupPhotometry: {time.time() - t}")
         return ids, upload_id
