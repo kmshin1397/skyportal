@@ -562,6 +562,7 @@ class PhotometryHandler(BaseHandler):
         t = time.time()
         query = Photometry.__table__.insert()
         DBSession().execute(query, params)
+        print(f"Number of Photometry rows: {len(params)}")
         print(f"Time to insert Photometry: {time.time() - t}")
         # print(
         #     query.compile(
@@ -572,6 +573,7 @@ class PhotometryHandler(BaseHandler):
         groupquery = GroupPhotometry.__table__.insert()
         DBSession().execute(groupquery, group_photometry_params)
         # print(groupquery.compile(compile_kwargs={"literal_binds": True}))
+        print(f"Number of GroupPhotometry rows: {len(group_photometry_params)}")
         print(f"Time to insert GroupPhotometry: {time.time() - t}")
         return ids, upload_id
 
