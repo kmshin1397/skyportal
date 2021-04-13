@@ -648,7 +648,7 @@ class PhotometryHandler(BaseHandler):
             )
 
         # always add the single user group
-        # group_ids.append(self.associated_user_object.single_user_group.id)
+        group_ids.append(self.associated_user_object.single_user_group.id)
         group_ids = list(set(group_ids))
         return group_ids
 
