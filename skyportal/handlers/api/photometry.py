@@ -1,6 +1,7 @@
 import uuid
 import math
 import time
+import datetime
 from astropy.time import Time
 from astropy.table import Table
 from marshmallow.exceptions import ValidationError
@@ -40,6 +41,47 @@ from ...enum_types import ALLOWED_MAGSYSTEMS
 
 
 _, cfg = load_env()
+
+
+def save_group_photometry_using_copy(rows):
+    import subprocess
+
+    # Build command
+    cmd = [
+        "psql",
+        "-d",
+        str(cfg["database.database"]),
+        "-h",
+        str(cfg["database.host"]),
+        "-p",
+        str(cfg["database.port"]),
+        '-U',
+        str(cfg["database.user"]),
+    ]
+    if cfg["database.password"] is not None:
+        cmd = [f"PGPASSWORD={cfg['database']['password']}"] + cmd
+    else:
+        cmd.append("--no-password")
+
+    cmd += [
+        "-c",
+        "COPY group_photometry(group_id, photometr_id, created_at, modified) FROM STDIN",
+        "--set=ON_ERROR_STOP=true",
+    ]
+
+    p = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+    )
+
+    for row in rows:
+        utcnow = datetime.datetime.utcnow().isoformat()
+        p.stdin.write(
+            f"{row['group_id']}\t{row['photometr_id']}\t{utcnow}\t{utcnow}\n".encode()
+        )
+
+    p.stdin.close()
+    p.wait()
 
 
 def nan_to_none(value):
@@ -558,24 +600,20 @@ class PhotometryHandler(BaseHandler):
 
         print(f"Make dicts: {time.time() - t}")
 
-        # Insert large photometry in batches (size 10000)
-        def divide_batches(params_list, n=10000):
-            # looping till length of params_list
-            for i in range(0, len(params_list), n):
-                yield params_list[i : i + n]  # noqa: E203
-
-        #  actually do the insert
         t = time.time()
         query = Photometry.__table__.insert()
-        for batch in divide_batches(params):
-            DBSession().execute(query, batch)
+        DBSession().execute(query, params)
+
+        DBSession.commit()
         print(f"Number of Photometry rows: {len(params)}")
         print(f"Time to insert Photometry: {time.time() - t}")
 
         t = time.time()
-        groupquery = GroupPhotometry.__table__.insert()
-        for batch in divide_batches(group_photometry_params):
-            DBSession().execute(groupquery, batch)
+        # groupquery = GroupPhotometry.__table__.insert()
+        # for batch in divide_batches(group_photometry_params):
+        #     DBSession().execute(groupquery, batch)
+
+        save_group_photometry_using_copy(group_photometry_params)
 
         print(f"Number of GroupPhotometry rows: {len(group_photometry_params)}")
         print(f"Time to insert GroupPhotometry: {time.time() - t}")
