@@ -657,7 +657,7 @@ class PhotometryHandler(BaseHandler):
         except ValidationError as e:
             return self.error(e.args[0])
 
-        self.finalize_transaction()
+        self.verify_and_commit()
         return self.success(data={'ids': ids, 'upload_id': upload_id})
 
     @permissions(['Upload data'])
@@ -771,7 +771,7 @@ class PhotometryHandler(BaseHandler):
                 id_map[df_index] = id
 
         # release the lock
-        self.finalize_transaction()
+        self.verify_and_commit()
 
         # get ids in the correct order
         ids = [id_map[pdidx] for pdidx, _ in df.iterrows()]
@@ -789,7 +789,7 @@ class PhotometryHandler(BaseHandler):
         format = self.get_query_argument('format', 'mag')
         outsys = self.get_query_argument('magsys', 'ab')
         output = serialize(phot, outsys, format)
-        self.verify_permissions()
+        self.verify_and_commit()
         return self.success(data=output)
 
     @permissions(['Upload data'])
@@ -822,6 +822,11 @@ class PhotometryHandler(BaseHandler):
               application/json:
                 schema: Error
         """
+
+        try:
+            photometry_id = int(photometry_id)
+        except ValueError:
+            return self.error('Photometry id must be an int.')
 
         photometry = Photometry.get_if_readable_by(photometry_id, self.current_user)
         if not photometry.is_modifiable_by(self.associated_user_object):
@@ -865,7 +870,7 @@ class PhotometryHandler(BaseHandler):
                 )
             photometry.groups = groups
 
-        self.finalize_transaction()
+        self.verify_and_commit()
         return self.success()
 
     @permissions(['Upload data'])
@@ -900,7 +905,7 @@ class PhotometryHandler(BaseHandler):
         DBSession().query(Photometry).filter(
             Photometry.id == int(photometry_id)
         ).delete()
-        self.finalize_transaction()
+        self.verify_and_commit()
 
         return self.success()
 
@@ -914,7 +919,7 @@ class ObjPhotometryHandler(BaseHandler):
         photometry = Obj.get_photometry_readable_by_user(obj_id, self.current_user)
         format = self.get_query_argument('format', 'mag')
         outsys = self.get_query_argument('magsys', 'ab')
-        self.verify_permissions()
+        self.verify_and_commit()
         return self.success(
             data=[serialize(phot, outsys, format) for phot in photometry]
         )
@@ -944,19 +949,26 @@ class BulkDeletePhotometryHandler(BaseHandler):
               application/json:
                 schema: Error
         """
-        # Permissions check:
-        phot_id = Photometry.query.filter(Photometry.upload_id == upload_id).first().id
-        _ = Photometry.get_if_readable_by(phot_id, self.current_user)
 
-        n_deleted = (
-            DBSession()
-            .query(Photometry)
-            .filter(Photometry.upload_id == upload_id)
-            .delete()
-        )
-        self.finalize_transaction()
+        # dont check permissions here -- pull all the photometry associated with
+        # the upload, not necessarily just the photometry that is accessible
+        # to the user. if any of the photometry fails to be deleted, send back
+        # 400
+        photometry_to_delete = Photometry.query.filter(
+            Photometry.upload_id == upload_id
+        ).all()
 
-        return self.success(f"Deleted {n_deleted} photometry points.")
+        n = len(photometry_to_delete)
+        if n == 0:
+            return self.error('Invalid bulk upload id.')
+
+        for phot in photometry_to_delete:
+            DBSession().delete(phot)
+
+        # this will return self.error if the user does not have access
+        # to delete any of the photometry points
+        self.verify_and_commit()
+        return self.success(f"Deleted {n} photometry points.")
 
 
 class PhotometryRangeHandler(BaseHandler):
@@ -1003,7 +1015,7 @@ class PhotometryRangeHandler(BaseHandler):
             query = query.filter(Photometry.mjd <= mjd)
 
         output = [serialize(p, magsys, format) for p in query]
-        self.verify_permissions()
+        self.verify_and_commit()
         return self.success(data=output)
 
 
