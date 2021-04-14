@@ -13,8 +13,7 @@ import yaml
 from yaml import Loader
 
 from baselayer.app.env import load_env, parser
-from baselayer.app.model_util import create_tables
-from skyportal.models import init_db
+
 from skyportal.tests import api
 
 
@@ -59,7 +58,10 @@ if __name__ == "__main__":
     src = yaml.load(open(fname, "r"), Loader=Loader)
     src_path = os.path.dirname(fname)
 
-    if create_tables:
+    if env.create_tables:
+        from baselayer.app.model_util import create_tables
+        from skyportal.models import init_db
+
         print(f"Connecting to database {cfg['database']['database']}")
         init_db(**cfg['database'])
 
