@@ -62,7 +62,7 @@ if __name__ == "__main__":
         from baselayer.app.model_util import create_tables
         from skyportal.models import init_db
 
-        RETRIES = 6
+        RETRIES = 10
         timeout = 1
         for i in range(RETRIES):
             try:
