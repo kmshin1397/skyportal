@@ -1,6 +1,9 @@
 name: Add labels to SkyPortal PRs
 
 on:
+  # push:
+  #   branches:
+  #     - annotate-spectra
   # Note: https://github.com/actions/labeler/issues/121
   - pull_request_target
 

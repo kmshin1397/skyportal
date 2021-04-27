@@ -7,6 +7,7 @@ from ..base import BaseHandler
 from ...models import (
     DBSession,
     Comment,
+    CommentOnSpectrum,
     Group,
     User,
     UserNotification,
@@ -26,7 +27,7 @@ def users_mentioned(text):
 
 class CommentHandler(BaseHandler):
     @auth_or_token
-    def get(self, comment_id):
+    def get(self, comment_id, comment_on_what="object"):
         """
         ---
         description: Retrieve a comment
@@ -38,6 +39,14 @@ class CommentHandler(BaseHandler):
             required: true
             schema:
               type: integer
+          - in: path
+            name: comment_on_what
+            required: false
+            schema:
+              type: string
+            description: |
+               What underlying data the comment is on:
+               an "object" (default), or a "spectrum".
         responses:
           200:
             content:
@@ -48,9 +57,25 @@ class CommentHandler(BaseHandler):
               application/json:
                 schema: Error
         """
-        comment = Comment.get_if_accessible_by(
-            comment_id, self.current_user, raise_if_none=True
-        )
+        if type(comment_on_what) != str:
+            return self.error(
+                f'Wrong input type {type(comment_on_what)} given as "comment_on_what" argument'
+            )
+
+        if comment_on_what.lower() == "object":  # comment on object (default)
+            comment = Comment.get_if_accessible_by(
+                comment_id, self.current_user, raise_if_none=True
+            )
+        elif comment_on_what.lower() == "spectrum":
+            comment = CommentOnSpectrum.get_if_accessible_by(
+                comment_id, self.current_user, raise_if_none=True
+            )
+        # add more options using elif
+        else:
+            return self.error(
+                f'Wrong input "{comment_on_what}" given as "comment_on_what" argument.'
+            )
+
         return self.success(data=comment)
 
     @permissions(['Comment'])
@@ -68,6 +93,12 @@ class CommentHandler(BaseHandler):
                 properties:
                   obj_id:
                     type: string
+                  spectrum_id:
+                    type: integer
+                    description: |
+                      ID of spectrum that this comment should be
+                      attached to. Leave empty to post a comment
+                      on the object instead.
                   text:
                     type: string
                   group_ids:
@@ -113,6 +144,8 @@ class CommentHandler(BaseHandler):
             return self.error("Missing required field `obj_id`")
         comment_text = data.get("text")
 
+        spectrum_id = data.get("spectrum_id", None)
+
         group_ids = data.pop('group_ids', None)
         if not group_ids:
             groups = self.current_user.accessible_groups
@@ -137,14 +170,25 @@ class CommentHandler(BaseHandler):
             attachment_bytes, attachment_name = None, None
 
         author = self.associated_user_object
-        comment = Comment(
-            text=comment_text,
-            obj_id=obj_id,
-            attachment_bytes=attachment_bytes,
-            attachment_name=attachment_name,
-            author=author,
-            groups=groups,
-        )
+        if spectrum_id is not None:
+            comment = CommentOnSpectrum(
+                text=comment_text,
+                spectrum_id=spectrum_id,
+                obj_id=obj_id,
+                attachment_bytes=attachment_bytes,
+                attachment_name=attachment_name,
+                author=author,
+                groups=groups,
+            )
+        else:  # the default is to post a comment directly on the object
+            comment = Comment(
+                text=comment_text,
+                obj_id=obj_id,
+                attachment_bytes=attachment_bytes,
+                attachment_name=attachment_name,
+                author=author,
+                groups=groups,
+            )
         users_mentioned_in_comment = users_mentioned(comment_text)
         if users_mentioned_in_comment:
             for user_mentioned in users_mentioned_in_comment:
@@ -169,7 +213,7 @@ class CommentHandler(BaseHandler):
         return self.success(data={'comment_id': comment.id})
 
     @permissions(['Comment'])
-    def put(self, comment_id):
+    def put(self, comment_id, comment_on_what="object"):
         """
         ---
         description: Update a comment
@@ -181,6 +225,14 @@ class CommentHandler(BaseHandler):
             required: true
             schema:
               type: integer
+          - in: path
+            name: comment_on_what
+            required: false
+            schema:
+              type: string
+            description: |
+               What underlying data the comment is on:
+               an "object" (default), or a "spectrum".
         requestBody:
           content:
             application/json:
@@ -206,16 +258,33 @@ class CommentHandler(BaseHandler):
               application/json:
                 schema: Error
         """
-        c = Comment.get_if_accessible_by(
-            comment_id, self.current_user, mode="update", raise_if_none=True
-        )
+
+        if type(comment_on_what) != str:
+            return self.error(
+                f'Wrong input type {type(comment_on_what)} given as "comment_on_what" argument'
+            )
+
+        if comment_on_what.lower() == "object":  # comment on object
+            schema = Comment.__schema__()
+            c = Comment.get_if_accessible_by(
+                comment_id, self.current_user, mode="update", raise_if_none=True
+            )
+        elif comment_on_what.lower() == "spectrum":
+            schema = CommentOnSpectrum.__schema__()
+            c = CommentOnSpectrum.get_if_accessible_by(
+                comment_id, self.current_user, mode="update", raise_if_none=True
+            )
+        # add more options using elif
+        else:
+            return self.error(
+                f'Wrong input "{comment_on_what}" given as "comment_on_what" argument.'
+            )
 
         data = self.get_json()
         group_ids = data.pop("group_ids", None)
         data['id'] = comment_id
         attachment_bytes = data.pop('attachment_bytes', None)
 
-        schema = Comment.__schema__()
         try:
             schema.load(data, partial=True)
         except ValidationError as e:
@@ -248,7 +317,7 @@ class CommentHandler(BaseHandler):
         return self.success()
 
     @permissions(['Comment'])
-    def delete(self, comment_id):
+    def delete(self, comment_id, comment_on_what="object"):
         """
         ---
         description: Delete a comment
@@ -260,15 +329,39 @@ class CommentHandler(BaseHandler):
             required: true
             schema:
               type: integer
+          - in: path
+            name: comment_on_what
+            required: false
+            schema:
+              type: string
+            description: |
+               What underlying data the comment is on:
+               an "object" (default), or a "spectrum".
         responses:
           200:
             content:
               application/json:
                 schema: Success
         """
-        c = Comment.get_if_accessible_by(
-            comment_id, self.current_user, mode="delete", raise_if_none=True
-        )
+        if type(comment_on_what) != str:
+            return self.error(
+                f'Wrong input type {type(comment_on_what)} given as "comment_on_what" argument'
+            )
+
+        if comment_on_what.lower() == "object":  # comment on object
+            c = Comment.get_if_accessible_by(
+                comment_id, self.current_user, mode="delete", raise_if_none=True
+            )
+        elif comment_on_what.lower() == "spectrum":
+            c = CommentOnSpectrum.get_if_accessible_by(
+                comment_id, self.current_user, mode="delete", raise_if_none=True
+            )
+        # add more options using elif
+        else:
+            return self.error(
+                f'Wrong input "{comment_on_what}" given as "comment_on_what" argument.'
+            )
+
         obj_key = c.obj.internal_key
         DBSession().delete(c)
         self.verify_and_commit()
@@ -278,7 +371,7 @@ class CommentHandler(BaseHandler):
 
 class CommentAttachmentHandler(BaseHandler):
     @auth_or_token
-    def get(self, comment_id):
+    def get(self, comment_id, comment_on_what="object"):
         """
         ---
         description: Download comment attachment
@@ -290,6 +383,14 @@ class CommentAttachmentHandler(BaseHandler):
             required: true
             schema:
               type: integer
+          - in: path
+            name: comment_on_what
+            required: false
+            schema:
+              type: string
+            description: |
+               What underlying data the comment is on:
+               an "object" (default), or a "spectrum".
           - in: query
             name: download
             nullable: True
@@ -322,10 +423,25 @@ class CommentAttachmentHandler(BaseHandler):
 
         """
         download = strtobool(self.get_query_argument('download', "True").lower())
+        if type(comment_on_what) != str:
+            return self.error(
+                f'Wrong input type {type(comment_on_what)} given as "comment_on_what" argument'
+            )
 
-        comment = Comment.get_if_accessible_by(
-            comment_id, self.current_user, raise_if_none=True
-        )
+        if comment_on_what.lower() == "object":  # comment on object
+            comment = Comment.get_if_accessible_by(
+                comment_id, self.current_user, raise_if_none=True
+            )
+        elif comment_on_what.lower() == "spectrum":
+            comment = CommentOnSpectrum.get_if_accessible_by(
+                comment_id, self.current_user, raise_if_none=True
+            )
+        # add more options using elif
+        else:
+            return self.error(
+                f'Wrong input "{comment_on_what}" given as "comment_on_what" argument.'
+            )
+
         self.verify_and_commit()
 
         if download:
