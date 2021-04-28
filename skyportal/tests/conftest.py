@@ -695,6 +695,16 @@ def user_no_groups(public_stream):
 
 
 @pytest.fixture()
+def user_no_groups_stream2(public_stream2):
+    user = UserFactory(
+        roles=[models.Role.query.get("Full user")], streams=[public_stream2]
+    )
+    user_id = user.id
+    yield user
+    UserFactory.teardown(user_id)
+
+
+@pytest.fixture()
 def user_no_groups_no_streams():
     user = UserFactory(roles=[models.Role.query.get("Full user")], streams=[])
     user_id = user.id
@@ -732,6 +742,17 @@ def upload_data_token_no_groups_no_streams(user_no_groups_no_streams):
     token_id = create_token(
         ACLs=["Upload data"],
         user_id=user_no_groups_no_streams.id,
+        name=str(uuid.uuid4()),
+    )
+    yield token_id
+    delete_token(token_id)
+
+
+@pytest.fixture()
+def upload_data_token_no_groups_stream_two(user_no_groups_stream2):
+    token_id = create_token(
+        ACLs=["Upload data"],
+        user_id=user_no_groups_stream2.id,
         name=str(uuid.uuid4()),
     )
     yield token_id

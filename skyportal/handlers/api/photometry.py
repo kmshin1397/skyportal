@@ -780,7 +780,7 @@ class PhotometryHandler(BaseHandler):
         for df_index, duplicate in duplicated_photometry:
             id_map[df_index] = duplicate.id
             duplicate_group_ids = set([g.id for g in duplicate.groups])
-
+            print(duplicate)
             # posting to new groups?
             if len(set(group_ids) - duplicate_group_ids) > 0:
                 # select old + new groups
@@ -799,6 +799,7 @@ class PhotometryHandler(BaseHandler):
                 streams = Stream.get_if_accessible_by(stream_ids, self.current_user)
                 # update the corresponding photometry entry in the db
                 duplicate.streams.extend(streams)
+                print("extended")
 
         # now safely drop the duplicates:
         new_photometry = df.loc[new_photometry_df_idxs]
